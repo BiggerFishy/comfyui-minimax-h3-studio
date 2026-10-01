@@ -1,6 +1,6 @@
-# MiniMax H3 Studio — Barn Owl Edition
+# MiniMax H3 Studio
 
-[Download the workflow ZIP](https://github.com/BiggerFishy/comfyui-minimax-h3-studio/releases/download/v1.0.0/MiniMax-H3-Studio-Barn-Owl-Edition.zip) · [Release page](https://github.com/BiggerFishy/comfyui-minimax-h3-studio/releases/tag/v1.0.0)
+[Download the workflow ZIP](https://github.com/BiggerFishy/comfyui-minimax-h3-studio/releases/download/v1.0.0/MiniMax-H3-Studio.zip) · [Release page](https://github.com/BiggerFishy/comfyui-minimax-h3-studio/releases/tag/v1.0.0)
 
 A local ComfyUI workflow for video inpainting and character replacement, with a ready-to-run Barn Owl example.
 
@@ -19,11 +19,11 @@ Use the workflow ZIP linked above. It includes the workflow, custom nodes, and d
 1. Extract the ZIP. Use a current ComfyUI build with native MiniMax H3, SAM3.1, and subgraph support.
 2. Merge the included `ComfyUI` folder into your ComfyUI folder; both included custom-node folders are needed.
 3. Install `custom_nodes/ComfyUI-H3-Studio-Support/requirements.txt` using your ComfyUI Python. Ensure FFmpeg and ffprobe are available, then restart ComfyUI. See the included `README.txt` for details.
-4. Open the Barn Owl workflow, or drag its JSON into ComfyUI.
+4. Open the MiniMax H3 Studio workflow, or drag its JSON into ComfyUI.
 5. Download the required models using the Models node, then run the example.
 
 The fixed seed makes the example repeatable. Choose **Seed behavior > Randomize** to try variations; results can take several attempts. Only the Barn Owl saved character is bundled.
 
 Model weights, ComfyUI, and GPU drivers are not included. Model terms are linked on the models' publisher pages.
 
-ZIP SHA-256: `e95f1dbeacbe74fe80cd712249cce389db89b49b60f488deff626ae156d66604`
+ZIP SHA-256: `1417cc4d3e3a93bba64bbe75a74fb5fc5b09f6febbfb61ba248657e29352cf32`
