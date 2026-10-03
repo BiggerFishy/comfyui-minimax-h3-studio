@@ -2,13 +2,14 @@
 
 [Download the workflow ZIP](https://github.com/BiggerFishy/comfyui-minimax-h3-studio/releases/latest/download/MiniMax-H3-Studio.zip) · [Latest release](https://github.com/BiggerFishy/comfyui-minimax-h3-studio/releases/latest)
 
-A local ComfyUI workflow for video inpainting and character replacement, with a preconfigured Barn Owl example. Version **1.0.2** selects native PyTorch attention, explicitly disables the optional Triton backend, and adds an internal H3 attention safety node to all three modes. It retains the Windows CPU weight reader, LoRA controls, trim popup, and layout with five main nodes and three removable mode notes.
+A local ComfyUI workflow for video inpainting and character replacement, with a preconfigured Barn Owl example. Version **1.0.3** fixes source-video loading by reading prepared frames sequentially in one decoder process. It retains the native PyTorch attention profile, Windows CPU weight reader, LoRA controls, trim popup, and layout with five main nodes and three removable mode notes.
 
 Use **MiniMax-H3-Studio.zip** linked above. It includes the workflow, custom nodes, launchers, and demo media. GitHub's automatically generated Source code archives are not the installation package.
 
 ## Included
 
 - Organized Studio controls with a restored video-trim popup, reference images, adjustable quality, and video mask previews.
+- Sequential source-video loading with exact frame-count checks and errors that report missing frame counts and FFmpeg details.
 - SAM3, rectangle, or full-frame editing, plus a preserve selection and reusable saved characters.
 - Publisher links and individual model download buttons. Model weights are downloaded separately.
 - The Barn Owl portrait, source clip, and saved character. The example opens in Video inpainting with the supplied character and scene prompts and SAM3 target **“the man”**. It processes the first **3 seconds**, at **0.8 MP**, with fixed seed **688636457668368**.
@@ -21,7 +22,7 @@ Each of the three mode notes is separate and can be deleted. Save Character stor
 ## Setup
 
 1. Use a current ComfyUI build with native MiniMax H3, SAM3.1, subgraphs, and the `--disable-fast-disk` and `--use-pytorch-cross-attention` startup options. A compatible PyTorch/CUDA environment is required. The INT8 ConvRot models' publisher recommends PyTorch with CUDA 13.0; keep ComfyUI's own requirements current and follow the relevant model's requirements.
-2. Extract the ZIP and **merge the contents of its `ComfyUI` folder into your existing ComfyUI folder**. Both `ComfyUI-H3-Studio` and `ComfyUI-H3-Studio-Support` must be inside `custom_nodes`. The files `Start-MiniMax-H3-Studio.bat` and `h3_studio_start.py` must sit **beside ComfyUI's `main.py`**, not inside another nested `ComfyUI` folder.
+2. Extract the ZIP and **merge the contents of its `ComfyUI` folder into your existing ComfyUI folder**. Update both `ComfyUI-H3-Studio` and `ComfyUI-H3-Studio-Support` from the same release; both must be inside `custom_nodes`. The files `Start-MiniMax-H3-Studio.bat` and `h3_studio_start.py` must sit **beside ComfyUI's `main.py`**, not inside another nested `ComfyUI` folder.
 3. Install **both** `custom_nodes/ComfyUI-H3-Studio/requirements.txt` and `custom_nodes/ComfyUI-H3-Studio-Support/requirements.txt` using the Python environment that runs ComfyUI. The included Studio requirements specify **safetensors 0.8.0 or newer**. Ensure **both FFmpeg and ffprobe** are available on PATH. [FFmpeg's download page](https://ffmpeg.org/download.html) lists platform packages. The `imageio-ffmpeg` fallback supplies FFmpeg only, not ffprobe.
 4. Close the existing ComfyUI server, then start the included stable launcher as described below. A fresh server process is required for startup settings to take effect; reopening the browser alone does not change them.
 5. Open **MiniMax H3 Studio** from ComfyUI's Workflows list, or drag `MiniMax H3 Studio.json` from the archive into ComfyUI.
@@ -83,18 +84,26 @@ Use the restored trim popup to set the source-video range. The bundled example r
 
 The portable support pack supplies media loading, mask caching, memory settings, and saved-character storage. No external SAM3 plugin or Qwen captioner custom-node pack is required. The workflow uses the native SAM3.1 checkpoint and the H3 conditioning encoder listed in its Models node.
 
-If the larger **ComfyUI-MiniMax-Safe** pack is already installed, it remains authoritative and the portable support pack defers to it to avoid duplicate node names and character-library routes. Do not install a partial or unrelated folder under that name.
+Studio uses its own internal video-preparation node from the portable support pack, so an older **ComfyUI-MiniMax-Safe** installation cannot select an older decoder for Studio. If that larger pack is present, it remains authoritative for the shared masks, memory settings, and character-library routes. The portable pack avoids registering duplicates for those shared names. Do not install a partial or unrelated folder under the MiniMax-Safe name.
+
+The file loader first prepares the selected trim at 24 fps and the existing analysis size, then reads its frames sequentially in batches of eight. This removes the repeated timestamp seeks that could return an incomplete section near a chunk boundary. The final IMAGE tensor still contains the whole prepared clip; this update bounds the extra decoder buffers and does not remove that final allocation. Audio retains the selected trim and prepared-video duration. Missing, partial, or extra frames and FFmpeg failures produce an error instead of filling or dropping frames silently. Restart ComfyUI after updating both packs.
 
 Saved characters are stored locally in `ComfyUI/user/default/h3_character_presets`, with durable images under `ComfyUI/input/Character_Presets`. Only the supplied Barn Owl saved character and two demo media files are bundled. Other saved characters from the creator's computer are not included. Review those local folders before sharing your own installation or character library. The support pack does not download tools or models automatically.
 
 ## Validation
 
-The PyTorch-attention backend settings completed two video-inpainting diagnostic runs on **October 2, 2026**: **15 seconds at 0.55 MP** in about **29m 10s**, then **3 seconds at 0.8 MP** in about **4m 45s** after memory cleanup in the same server process. Both used **`CUDA_LAUNCH_BLOCKING=1`**; these are diagnostic timings, **not normal generation-speed measurements**. The outputs contained 360 frames at 544 × 992 and 72 frames at 672 × 1184, respectively, both at 24 fps with audio. Full output decoding passed. These checks preceded installation of the new internal attention safety node and validate the backend settings only.
+On **October 3, 2026**, all **19 CPU decoder tests** passed using synthetic media only. They covered a 284-frame clip decoded with one process into 36 batches, exact frame order and window boundaries, a nonzero trim with audio, partial final batches, silence for a source without audio, missing/partial/extra frame errors, late FFmpeg failures, fragmented pipe reads, cancellation, and process/staging cleanup. All **3 isolated support-routing checks** also passed: Studio selects its own decoder with or without the older MiniMax-Safe pack, shared routes avoid duplication, and a missing updated support pack produces an actionable error. These checks opened no personal media or model weights.
+
+Version 1.0.3 changes video preparation and decoder routing. No new GPU generation was run for this patch. The GPU results below are historical evidence for earlier versions and backend settings; they do not establish new v1.0.3 generation results or visual quality.
+
+### Historical GPU results
+
+The PyTorch-attention backend settings completed two video-inpainting diagnostic runs on **October 2, 2026**: **15 seconds at 0.55 MP** in about **29m 10s**, then **3 seconds at 0.8 MP** in about **4m 45s** after memory cleanup in the same server process. Both used **`CUDA_LAUNCH_BLOCKING=1`**; these are diagnostic timings, **not normal generation-speed measurements**. The outputs contained 360 frames at 544 × 992 and 72 frames at 672 × 1184, respectively, both at 24 fps with audio. Full output decoding passed. These checks preceded installation of the internal attention safety node and validate the backend settings only.
 
 The exact installed **v1.0.2** package then completed a normal-launcher check on a fresh server: **3 seconds at 0.8 MP**, **8 steps**, in **4m 14s**, with CUDA launch blocking disabled. The runtime log confirmed that the internal H3 attention safety node selected PyTorch attention. The output contained **72 frames at 672 × 1184**, **24 fps**, with audio; full decoding passed. These October 2 checks ran on Windows with an RTX 4090 with 24 GB VRAM and 32 GB system RAM.
 
 Historical checks on **October 1, 2026**, used the previous SageAttention profile: the supplied **0.8 MP**, **8-step** demo completed at **3 seconds** in **2m 49s** and **8 seconds** in **9m 51s**, using the fixed example seed, INT8 ConvRot reference model, and Turbo V4 Step 600 pruned LoRA. Output decoding passed. That machine used Windows, an RTX 4090 with 24 GB VRAM, 32 GB RAM, a roughly 31 GB pagefile, ComfyUI 0.37.0, PyTorch 2.9.1+cu130, and safetensors 0.8.0. Those earlier runs validate only that earlier profile and are **not evidence that v1.0.2 or longer repeated runs passed**.
 
-Execution and file-integrity checks do not establish visual quality or support for arbitrary lengths, other hardware, or the experimental modes. Normal-launcher validation covers the three-second case; the fifteen-second and post-cleanup checks used diagnostic synchronization.
+Execution and file-integrity checks do not establish visual quality or support for arbitrary lengths, other hardware, or the experimental modes. Historical normal-launcher validation covers the three-second v1.0.2 case; the historical fifteen-second and post-cleanup checks used diagnostic synchronization.
 
 No generated demo output is included in the installation archive.
